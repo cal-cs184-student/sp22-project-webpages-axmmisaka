@@ -1,7 +1,335 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 1 here
-	</body>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>writeup</title>
+  <script
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+  type="text/javascript"></script>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<h1 id="cs-184-project-1">CS 184 Project 1</h1>
+<p><strong>IE9 OR ABOVE AND JAVASCRIPT CAPABILITY IS REQUIRED TO
+SUCCESSFULLY RENDER THIS DOCUMENT</strong><br />
+<strong>HTML5 IS PREFERABLE BUT NOT REQUIRED</strong></p>
+<p>This site best viewed with Netscape Navigator: <img
+src="images/nostalgia.png" alt="nostalgia" /></p>
+<h2 id="overview">Overview</h2>
+<p>In this project, a simple rasterizer is made. Overall, four main
+topics which we learnt are involved and used: point-in-triangle test
+(for task 1 and task 2), homogeneous coordinate systems and
+transformations within (task 3), and barycentric coordinates (for task
+4, 5, 6), and texture filtering/mipmap (for task 5, 6).<br />
+Overall, in all tasks expect task 3 (which is mainly linear algebra), we
+do two things: determine if a point in buffer, which depends on
+supersampling rate, should be drawed, and if it is to be drawn,
+determine what colour it should be.</p>
+<h2 id="task-1">Task 1</h2>
+<h3 id="walk-through-how-you-rasterize-triangles-in-your-own-words">Walk
+through how you rasterize triangles in your own words</h3>
+<p>My task 1 mainly consists the following steps: 1. Find the maximum
+and minimum of x and y coordinates, and chop-off out-of-boundary parts
+if needed. This determines the bounding box. 2. Construct 3 line
+functions as lambda functions, one for x0-x1, one for x1-x2, one for
+x2-x0 (order matters). This is inefficient, but it drastically increases
+readibility. 3. Loop through every x and y coordinate in the bounding
+box, and check if <code>(x + 0.5f, y + 0.5f)</code> is on the same side
+(all positive or all negative) of all three lines - we do not need to
+care about orientation if we use this test. 4. If they are, call
+<code>fill_pixel(x, y, color)</code> to update buffer.</p>
+<h3
+id="explain-how-your-algorithm-is-no-worse-than-one-that-checks-each-sample-within-the-bounding-box-of-the-triangle">Explain
+how your algorithm is no worse than one that checks each sample within
+the bounding box of the triangle</h3>
+<p>My algorithm is checking each sample within the bounding box of the
+triangle, so it cannot be worse.</p>
+<h3 id="show-a-png-screenshot-of-basictest4.svg">Show a png screenshot
+of <code>basic/test4.svg</code></h3>
+<p><img src="images/q1-test4.png" alt="q1-test4" /><br />
+Hopefully this part is interesting!</p>
+<h3 id="extra-credit">Extra Credit</h3>
+<p>A lot of modifications are made, they are available in
+<code>q1-ec</code> branch.<br />
+0. Instead of declaring lambda function, I inlined all point-in-line
+expressions. This makes calculations significantly quicker as no
+function calls are involved. 1. Instead of calculating
+<code>x = xx + 0.5f</code> and <em>vice versa</em> for <code>y</code>, I
+initialise <code>x</code> and <code>y</code> and add <code>1.0f</code>
+each time. This is good because int&lt;-&gt;float arithmetics is
+slow.<br />
+2. I outer-loop <code>x</code> and inner-loop <code>y</code>. In inner
+loop, if I encountered pixels inside the traingle, and then found one
+pixel that is outside of the triangle, break the inner-loop as nothing
+beyond is to be rendered. This is useful for triangles like the green
+one in <code>test-4</code>. 3. I record the <code>y</code> values when
+rendering the first and second verticle (<code>x</code>) line. Then for
+each new <code>x</code> value, I pre-calculate which <code>y</code> it
+should start scanning from. This is useful for triangles like the
+magenta one in <code>test-4</code>. With 2 and 3 combined, the “bounding
+box” should look like this:<br />
+<img src="images/q1-bounding-box.png" alt="boundingbox" /> I used
+<code>std::chrono::steady_clock</code> to measure preformance before and
+after optimisations.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Test</th>
+<th>No optimisation</th>
+<th>All optimisations</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>test-4.svg (triangle 0)</td>
+<td>1166900</td>
+<td>900900</td>
+</tr>
+<tr class="even">
+<td>test-4.svg (triangle 1)</td>
+<td>596600</td>
+<td>390300</td>
+</tr>
+<tr class="odd">
+<td>test-4.svg (triangle 2)</td>
+<td>213300</td>
+<td>171200</td>
+</tr>
+<tr class="even">
+<td>test-4.svg (triangle 3)</td>
+<td>1104700</td>
+<td>860700</td>
+</tr>
+<tr class="odd">
+<td>test-4.svg (triangle 4)</td>
+<td>73900</td>
+<td>58300</td>
+</tr>
+<tr class="even">
+<td>05_lion.svg (all)</td>
+<td>50414300</td>
+<td>40105500</td>
+</tr>
+</tbody>
+</table>
+<h2 id="task-2">Task 2</h2>
+<h3
+id="walk-through-your-supersampling-algorithm-and-data-structures">Walk
+through your supersampling algorithm and data structures</h3>
+<p>The only data structure I used is
+<code>std::vector&lt;Color&gt;</code> named <code>sample_buffer</code>
+which is also included in skeleton. I made its size
+<code>sample_rate</code> times bigger than pixels contained in the
+graph.<br />
+The algorithm is very simple. Scale everything (<code>width</code>,
+<code>height</code>, <code>x0</code>, <code>y0</code>, …) by <span
+class="math inline">\(\sqrt{\text{sample\_rate}}\)</span> (which is
+guaranteed to be an integer), then write to the sample buffer as if
+there’s no supersampling at all. Finally, in
+<code>resolve_to_framebuffer</code>, for frame buffer position
+<code>x, y</code>, look for all sample buffer position with <span
+class="math inline">\(x+x&#39;\)</span> where <span
+class="math inline">\(x&#39;=\{0, 1, ...,
+\sqrt{\text{sample\_rate}}\}\)</span> and <em>vice versa</em> for <span
+class="math inline">\(y+y&#39;\)</span>, a total of <span
+class="math inline">\(\text{sample\_rate}\)</span> samples. Average them
+out to obtain the real colour, and finally write to corresponding frame
+buffer.</p>
+<h3 id="why-is-supersampling-useful">Why is supersampling useful</h3>
+<p>It antialiases by making sampling frequency higher, thus make
+Shannon-Nyquist frequency higher, and make HF parts finer.</p>
+<h3
+id="what-modifications-did-you-make-to-the-rasterization-pipeline-in-the-process">What
+modifications did you make to the rasterization pipeline in the
+process</h3>
+<ol type="1">
+<li><code>resolve_to_framebuffer</code> is modified as described
+above.</li>
+<li>A new method, <code>fill_supersampled_pixel</code>, is declared and
+does exactly the same thing as original <code>fill_pixel</code>.</li>
+<li>The original <code>fill_pixel</code> now fills all <span
+class="math inline">\(\text{sample\_rate}\)</span> samples in the sample
+buffer which the coordinate corresponds to.</li>
+<li>Every function that wants to use supersampling must use
+<code>fill_supersampled_pixel</code> with supersampled coordinate.
+Functions that do not supersample needs no modification as they continue
+to use <code>fill_pixel</code>.</li>
+<li>Every time a change in samping rate is detected, the sample buffer
+must be reset and everything re-drawed.</li>
+</ol>
+<h3 id="show-png-screenshots">Show png screenshots</h3>
+<p><img src="images/q2-1.png" alt="1" /><br />
+<img src="images/q2-2.png" alt="2" /><br />
+<img src="images/q2-3.png" alt="3" /><br />
+<img src="images/q2-4.png" alt="4" /><br />
+These effects are observed because more samples are done at sharper
+edges (HF parts), resulting in finer edges.</p>
+<h3 id="extra-credit-1">Extra Credit</h3>
+<p>TBD</p>
+<h2 id="task-3">Task 3</h2>
+<p><img src="images/q3-1.png" alt="french" /><br />
+This is a picture of a decapitated cubeman (instead of a robot, this is
+Robespierre!) who is still waving. I used <code>translate</code> on its
+head and <code>translate</code> with <code>rotate</code> on its right
+arm.<br />
+<img src="images/my_robot.svg" alt="french1" /></p>
+<h3 id="extra-credit-2">Extra Credit</h3>
+<p>I added a feature to rotate the camera when pressing <code>Q</code>
+and <code>E</code> in branch <code>q3-ec</code>.<br />
+<video width="1024" height="768" controls>
+<source src="images/rotate.mp4" type="video/mp4"> Your browser does not
+support the video tag. </video> You can use <a
+href="images/rotate.mp4">this link</a> to download if you are running
+Netscape 3.0.</p>
+<h2 id="task-4">Task 4</h2>
+<h3 id="explain-barycentric-coordinates-in-your-own-words">Explain
+barycentric coordinates in your own words</h3>
+<p>Barycentric coordinates is basically representing how a point in a
+triangle’s relative position/relative distance to each vertex is. We can
+then see how much “influence” each vertex can give to that point, or map
+two triangles given 3 vertices between one and another.<br />
+<img src="images/q4-1.png" alt="barycentric" /><br />
+In this example, points to the right are relatively closer to the
+rightmost vertex (coloured red), and thus they are “influenced” by red
+more and are mostly coloured red.</p>
+<h3 id="screenshot">Screenshot</h3>
+<figure>
+<img src="images/q4-2.png" alt="basic7" />
+<figcaption aria-hidden="true">basic7</figcaption>
+</figure>
+<h2 id="task-5">Task 5</h2>
+<h3 id="explain-pixel-sampling-in-your-own-words">Explain pixel sampling
+in your own words…</h3>
+<p>Basically, given three coordinates in <code>uv</code> plane,
+determine which point in texture space a barycentric coordinate which we
+calculated from a point in triangle in screen space corresponds to, and
+get the colour we need from the texture.<br />
+My implementation is to first get barycentric coordinates, then multiply
+them with <span class="math inline">\(u_0, u_1, u_2\)</span> and <span
+class="math inline">\(v_0, v_1, v_2\)</span> accordingly. This should
+get us the corresponding texture space coordinate.<br />
+Then we need pixel sampling method to get the actual colour. For nearest
+sampling, I round both <code>u</code> and <code>v</code> to nearest
+integer, and then sample colour from texture. For bilinear sampling, I
+first check if <code>u</code> and <code>v</code> are integer, and decide
+if I should directly sample the point or use linear sampling. If they
+are not, I round up and down <code>u</code> and <code>v</code>, get
+colour from <code>u, v</code>’s four nearest neighbours, then
+interpolate them with <code>lerp()</code> function to obtain the colour
+for <code>u, v</code>.</p>
+<h3 id="check-out-the-svg">Check out the svg…</h3>
+<p>Nearest at 1: <img src="images/q5-nearest.png" alt="nearest" /><br />
+Bilinear at 1: <img src="images/q5-bilinear.png" alt="bilinear" /><br />
+Nearest at 16: <img src="images/q5-nearest-16.png"
+alt="nearest" /><br />
+Bilinear at 16: <img src="images/q5-bilinear-16.png"
+alt="bilinear" /></p>
+<h2 id="task-6">Task 6</h2>
+<h3 id="explain-level-sampling">Explain level sampling…</h3>
+<p>Essentially, we calculate the norm of “stretch” vector (<span
+class="math inline">\(\frac{\partial (u, v)}{\partial x}\)</span> or
+<em>vice versa</em>, in other words, how much difference are there in
+texture space when there’s 1 unit of difference in screen space), and
+choose the best mipmap level that minimises aliasing given the
+“stretch”. I simply calculated <span
+class="math inline">\(\frac{\partial (u, v)}{\partial x}\)</span> and
+<span class="math inline">\(\frac{\partial (u, v)}{\partial y}\)</span>
+as instructed in the spec (<code>rasterizer.cpp:227-241</code>), and
+used them to calculate <span class="math inline">\(L\)</span> as shown
+<a
+href="https://cs184.eecs.berkeley.edu/sp22/lecture/5-65/texture-mapping">here</a>.</p>
+<h3 id="you-can-now-adjust-your-sampling">You can now adjust your
+sampling…</h3>
+<p>I will be like aPple and use “fastest”, “faster” and “fast”, but in
+reality they mean “fast”, “medium” and “slow”.</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>By…</th>
+<th>Selecting Pixel Sampling</th>
+<th>Level Sampling</th>
+<th>Number of Samples per Pixel (Supersampling)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Speed</td>
+<td>Fastest (no additional ops)</td>
+<td>Faster (need calculate <span class="math inline">\(L\)</span> and
+access <code>std::vector</code>)</td>
+<td>Fast (need to sample much more pixels and downsample)</td>
+</tr>
+<tr class="even">
+<td>Memory Usage</td>
+<td>Smallest (no additional memory cost)</td>
+<td>Small/Smaller (need to store mipmap in memory, may be ideal if
+there’s few textures and big sample buffer)</td>
+<td>Small/Smaller (need to store a much bigger sample buffer, may be
+ideal if there’s a lot of textures)</td>
+</tr>
+<tr class="odd">
+<td>Antialiasing power</td>
+<td>High (only antialiasing is to take off your glasses)</td>
+<td>Higher (transition between mipmaps and other issues)</td>
+<td>Highest (directly change Shannon-Nyquist frequency)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="using-a-png-file-you-find-yourself">Using a png file you find
+yourself</h3>
+<p>Pic: <img src="images/diana.png" alt="diana" /></p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Level</th>
+<th>Nearest</th>
+<th>Bilinear</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Zero</td>
+<td><img src="images/q6-lzero-pnearest.png" /></td>
+<td><img src="images/q6-lzero-plinear.png" /></td>
+</tr>
+<tr class="even">
+<td>Nearest</td>
+<td><img src="images/q6-lnearest-pnearest.png" /></td>
+<td><img src="images/q6-lnearest-plinear.png" /></td>
+</tr>
+<tr class="odd">
+<td>Linear</td>
+<td><img src="images/q6-llinear-pnearest.png" /></td>
+<td><img src="images/q6-llinear-plinear.png" /></td>
+</tr>
+</tbody>
+</table>
+<p><a href="images/test7-diana.svg">svg file</a></p>
+<h2 id="extra-credit-crevitivity">Extra Credit Crevitivity</h2>
+<p>“Execution of Louis XVI”<br />
+<img src="images/screenshot_2-15_8-21-44.png" alt="Louis XVI" /><br />
+<img src="images/louisxvi.svg" alt="Louis XVI" /></p>
+<h3 id="explain-how-you-did-it">Explain how you did it</h3>
+<p>I made it with Adobe Illustrator. Illustrator will use
+<code>&lt;rect&gt;</code> instead of <code>&lt;polygon&gt;</code> for
+rectangles when generating svg files. <code>robot.svg</code> bypassed
+this by using two triangles to form a rectangle. I bypassed this by
+adding a new anchor point for each rectangle, so Illustrator thought
+it’s actually a pentagon.</p>
+</body>
 </html>
