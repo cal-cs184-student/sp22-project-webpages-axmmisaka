@@ -6,7 +6,7 @@
 This site best viewed with Netscape Navigator: ![nostalgia](images/nostalgia.png)
 
 ## Overview
-In this project, a simple rasterizer is made. Overall, four main topics which we learnt are involved and used: point-in-triangle test (for task 1 and task 2), homogeneous coordinate systems and transformations within (task 3), and barycentric coordinates (for task 4, 5, 6), and texture filtering/mipmap (for task 5, 6).  
+In this project, a simple rasteriser is made. Overall, four main topics which we learnt are involved and used: point-in-triangle test (for task 1 and task 2), homogeneous coordinate systems and transformations within (task 3), and barycentric coordinates (for task 4, 5, 6), and texture filtering/mipmap (for task 5, 6).  
 Overall, in all tasks expect task 3 (which is mainly linear algebra), we do two things: determine if a point in buffer, which depends on supersampling rate, should be drawed, and if it is to be drawn, determine what colour it should be.
 
 ## Task 1
@@ -68,9 +68,17 @@ It antialiases by making sampling frequency higher, thus make Shannon-Nyquist fr
 These effects are observed because more samples are done at sharper edges (HF parts), resulting in finer edges.
 
 ### Extra Credit
-TBD
+I implemented jittered sampling. Instead of sampling `x = xx + 0.5f`, I added `std::default_random_engine` and `std::normal_distribution<float>(0.5f, 0.5f / 3.0f)` to the rasteriser, which, when called, can sample from $X~\mathcal{N}(0.5, \frac{0.5}{3})$, a normal distribution. $\sigma=\frac{0.5}{3}$ is chosen such that samples beyond $(0, 1)$ is unlikely, but there are additional checks to ensure sample is taken from the subdomain. It works with supersampling. See branch `q2-ec`.  
+The results are shown below. When the sampling rate is low (`rate=1`), jittered sampling is not ideal as it adds jaggies; when sampling rate is medium (`rate=4`), it is ideal as it adds more smoothness (as it adds probability in either the sampled point is in triangle or out, and supersampling smoothes out jaggies); when sampling rate is high (`rate=16`), there isn't much difference since supersampling does most job. The test file is `.\svg\basic\test4.svg`
+
+|Sampling Rate|Original|Jittered|
+|---|---|---|
+|1|![](images/q2-ec-1-orig.png)|![](images/q2-ec-1-jitt.png)|
+|4|![](images/q2-ec-4-orig.png)|![](images/q2-ec-4-jitt.png)|
+|16|![](images/q2-ec-16-orig.png)|![](images/q2-ec-16-jitt.png)|
 
 ## Task 3
+I simply copypastaed matrices here: [https://cs184.eecs.berkeley.edu/sp22/lecture/4-26/transforms](https://cs184.eecs.berkeley.edu/sp22/lecture/4-26/transforms) and multiply them. Only thing to note is that `std::sin` takes in radian instead of angle, so some conversion is needed (see `transforms.cpp:38-39`).
 ![french](images/q3-1.png)  
 This is a picture of a decapitated cubeman (instead of a robot, this is Robespierre!) who is still waving. I used `translate` on its head and `translate` with `rotate` on its right arm.   
 ![french1](images/my_robot.svg) 
@@ -131,6 +139,14 @@ Nearest|![](images/q6-lnearest-pnearest.png)|![](images/q6-lnearest-plinear.png)
 Linear|![](images/q6-llinear-pnearest.png)|![](images/q6-llinear-plinear.png)|
 
 [svg file](images/test7-diana.svg)
+
+### EC
+I implemented anisotropic filtering in branch `q6-ec-anisotrophic`. It solves pictured like this where partial derivative of x and y differs drastically.  
+![no](images/q6-ec-1.png)  
+![no](images/q6-ec-2.png)  
+
+[svg](images/test8_tang_keke.svg)  
+[texture](images/liella.png)
 
 ## Extra Credit Crevitivity
 "Execution of Louis XVI"  
