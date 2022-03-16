@@ -1,7 +1,567 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-1 here
-	</body>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>writeup</title>
+  <script
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+  type="text/javascript"></script>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<h1 id="report-on-cs-184-project-3-path-tracer">Report on CS 184 Project
+3: Path Tracer</h1>
+<p><strong>IE9 OR ABOVE AND JAVASCRIPT CAPABILITY IS REQUIRED TO
+SUCCESSFULLY RENDER THIS DOCUMENT</strong><br />
+<strong>HTML5 IS PREFERABLE BUT NOT REQUIRED</strong></p>
+<p>This site best viewed with Netscape Navigator: <img
+src="images/nostalgia.png" alt="nostalgia" /></p>
+<h2 id="overview">Overview</h2>
+<p>This project aims to create core elements of a physical-based path
+tracing renderer.</p>
+<h2 id="part-1-ray-generation-and-scene-intersection">Part 1: Ray
+Generation and Scene Intersection</h2>
+<p>Author: l ### Walk through the ray generation and primitive
+intersection parts of the rendering pipeline. Firstly we need to convert
+the given coordinate <span class="math inline">\((x, y)\)</span> from
+image space to camera space. The sensor sample has to be on plane <span
+class="math inline">\(z = -1\)</span>, and from linear interpolation we
+can get <span class="math inline">\(x&#39; = (2x-1) \times
+tan(\frac{hFov_{rad}}{2}), y&#39; = (2y-1) \times
+tan(\frac{vFov_{rad}}{2})\)</span>. This <code>dir_cam</code> vector is
+then normalized, and converted from camera space to world space using
+<code>c2w</code>. The generated ray starts at camera position (in world
+space) and has direction <code>c2w * dir_cam</code>. Before returning
+the result, <code>min_t</code> and <code>max_t</code> is set to
+<code>nClip</code> and <code>fClip</code> respectively. <br/> For all
+primitive intersections, all intersections out of range
+(<code>[min_t, max_t]</code>) are ignored, and every valid intersection
+will shrink upper bound <code>max_t</code>. Determining intersection
+with spheres is based on equation <span class="math inline">\((o + td -
+c)^2 = R^2\)</span>, and solving it with discriminant (<span
+class="math inline">\(a = r.d \cdot r.d, b = 2 \times (O_{ray} -
+O_{sphere}) \cdot r.d, c = (O_{ray} - O_{sphere}) \cdot(O_{ray} -
+O_{sphere}) - r^2\)</span>). If <span class="math inline">\(b^2 - 4ac
+&lt; 0\)</span>, no intersection exists; otherwise intersection(s) can
+be calculated with <span class="math inline">\(\frac{-b \pm \sqrt{b^2 -
+4ac}}{2a}\)</span>, and intersection out of <span
+class="math inline">\([min_t, max_t]\)</span> range is discarded. As for
+triangles, Moller Trumbore Algorithm is used to get the barycentric
+coordinates at the intersection, and derive the normal vector based on
+<span class="math inline">\((1 - b1 - b2) * n1 + b1 * n2 + b2 *
+n3\)</span>, filling in provided <code>Intersection</code> accordingly.
+### Explain the triangle intersection algorithm you implemented in your
+own words. With the barycentric coordinate <span
+class="math inline">\((b_0, b_1, b_2)\)</span>, we substitute sphere
+boundary with triangle: <span class="math inline">\(O + tD = (1 - b_1 -
+b_2)P_0 + b_1P_1 + b_2P_2\)</span>, thus giving <span
+class="math inline">\(\begin{bmatrix} -D &amp; P_1 - P_0 &amp; P_2 - P_1
+\end{bmatrix} \begin{bmatrix} t \\ b_1 \\ b_2 \end{bmatrix} = O -
+P_0\)</span>. Then we can solve for <code>t</code>, <code>b1</code> and
+<code>b2</code>. ### Show images with normal shading for a few small
+<code>.dae</code> files.</p>
+<table>
+<colgroup>
+<col style="width: 54%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><img src="images/otherpic/ballroom_p1.png" /></th>
+<th><img src="images/otherpic/cow_p1.png" /></th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table>
+<h2 id="part-2">Part 2</h2>
+<p>Author: x ### Walk through your BVH construction algorithm. 1. I get
+the minimum and maximum location of centroids of primitives for each
+axis. With them, I can determine which axis is the longest, and split
+along that vertex. 2. If the total number of primitives is less than
+<code>max_leaf_size</code>, I create a leaf BVH node, with
+<code>node.start</code> as <code>start</code> and <code>node.end</code>
+as <code>end</code> as provided in the skeleton code, finally add all
+primitives to create a bounding box that bounds all of them. 3. If the
+total number of primitives is more than <code>max_leaf_size</code>, I
+split the elements by finding a “midway” iterator <code>p</code> using
+the simple herustics below. Then I recursively call
+<code>construct_bvh</code> twice, one that contains
+<code>start~p</code>, one that contains <code>p~end</code>, to get left
+and right BVH node. The resulting bounding box should be a bounding box
+expanded with the bounding boxes of the 2 BVH nodes. I finally set them
+as the <code>l</code> and <code>r</code> of the current BVN node and
+return.</p>
+<h3
+id="show-images-with-normal-shading-for-a-few-large-.dae-files-that-you-can-only-render-with-bvh-acceleration.">Show
+images with normal shading for a few large <code>.dae</code> files that
+you can only render with BVH acceleration.</h3>
+<p><img src="./images/part2/peter_t15_bvh.png" alt="peter" /><br />
+<img src="./images/part2/maxplanck_t8_bvh.png" alt="planck" /><br />
+<img src="./images/part2/wall-e_t8_1920_1080.png" alt="walle" /></p>
+<h3
+id="explain-the-heuristic-you-chose-for-picking-the-splitting-point.">Explain
+the heuristic you chose for picking the splitting point.</h3>
+<p>As described in (1) above I determined the longest axis. When a split
+is needed I use <code>std::sort</code> to sort elements (with the
+<code>start</code> and <code>end</code> iterator) by their location on
+that axis. Then, I pick the pivot <code>p</code> such that it is at the
+middle of the sorted elements; in other words, I split the element
+evenly by half. While this does not result in fastest intersection test,
+this may be way to build shallowest BVH tree as it has exactly and at
+most <span class="math inline">\(\log(n)\)</span> depth.</p>
+<h3
+id="compare-rendering-times-on-a-few-scenes-with-moderately-complex-geometries-with-and-without-bvh-acceleration.-present-your-results-in-a-one-paragraph-analysis.">Compare
+rendering times on a few scenes with moderately complex geometries with
+and without BVH acceleration. Present your results in a one-paragraph
+analysis.</h3>
+<p>With BVH Tree and bounding box test, ray tracing speedup on hive is
+around 1000-3000x compared to old-school ray tracing. This is an
+extremely notable improvement.</p>
+<p>All tests are run with argument <code>-t 8 -r 800 600</code> on
+<code>hive6.eecs</code> with i7-4770 @ 3.7GHz.</p>
+<table>
+<thead>
+<tr class="header">
+<th>dae File</th>
+<th>With Part 2</th>
+<th>Without Part 2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>cow</code></td>
+<td>0.0806</td>
+<td>43.0998</td>
+</tr>
+<tr class="even">
+<td><code>banana</code></td>
+<td>0.0608</td>
+<td>17.9874</td>
+</tr>
+<tr class="odd">
+<td><code>maxplanck</code></td>
+<td>0.1054</td>
+<td>382.9254</td>
+</tr>
+</tbody>
+</table>
+<p>For proof, see <a href="./images/part2/proof"></a></p>
+<h3
+id="extra-credit-implement-more-efficient-construction-and-intersection-routines-for-the-bvh-that-replace-the-recursive-calls-with-a-stack-and-a-while-loop-you-should-use-the-c-standard-librarys-stdstack-class.-compare-performance-in-terms-of-construction-time-and-scene-rendering-time.">EXTRA
+CREDIT: Implement more efficient construction and intersection routines
+for the BVH that replace the recursive calls with a stack and a while
+loop (you should use the C++ standard library’s std::stack class).
+Compare performance in terms of construction time and scene rendering
+time.</h3>
+<p>I used <code>std::stack</code> while implementing intersection test
+without thinking this is an possible extra credit oppourtunity, after
+deoptimising it and optimising construction, intersection time is
+tested:</p>
+<p>Everything is run on Ryzen 3800x @ 3.9HGz with
+<code>-t 16 -r 800 600</code>, windowed mode.</p>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>File</th>
+<th>Construction/Recursion</th>
+<th>Intersection/Recursion</th>
+<th>Construction/Iteration</th>
+<th>Intersection/Iteration</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>maxplanck</td>
+<td>0.1020</td>
+<td>25.3410</td>
+<td>0.1702</td>
+<td>0.0997</td>
+</tr>
+<tr class="even">
+<td>peter</td>
+<td>0.0719</td>
+<td>17.1900</td>
+<td>0.1240</td>
+<td>0.1011</td>
+</tr>
+<tr class="odd">
+<td>CBlucy</td>
+<td>0.3024</td>
+<td>8.5079</td>
+<td>0.5409</td>
+<td>0.0913</td>
+</tr>
+</tbody>
+</table>
+<p>See proof <a href="./images/part2/proof_ec">here</a>.</p>
+<p>Using while loop and <code>std::stack</code> can drastically increase
+runtime as 1. there’s less OS overhead and 2. we can retain
+<code>t0</code> and <code>t1</code> much more easily and use that t0 and
+t1 when testing intersection for children node. The recursive approach
+is headless (no t0 and t1 in argument) so it’s hard to do it.<br />
+But construction becomes slower. I think the thing is
+<code>std::stack</code> itself might be slower in this situation, also
+the bounding box construction logic makes it much easier to write in a
+recursive way (need child bounding box when constructing parent), I
+wrote lots of extra logic to account for this issue.<br />
+See branch <code>recursive-bvh</code> for the recursive version of BVH
+intersect.</p>
+<h2 id="part-3-direct-illumination">Part 3: Direct Illumination</h2>
+<p>Author: l ### Walk through both implementations of the direct
+lighting function. Hemisphere sampling: After creating the coordinate
+system based on normal vector of the hit point, generate a random
+incoming light direction <code>wj</code> with
+<code>hemisphereSampler-&gt;get_sample()</code>, and create a ray
+starting from <code>hit_p</code> with direction <code>o2w * wj</code>
+(both vectors are in world coordinates), <code>min_t</code> setup as
+<code>EPS_D</code>. If this ray intersects with objects in scene,
+<code>2 * PI * isect.bsdf-&gt;f(w_out, wj) * new_isect.bsdf-&gt;get_emission() * dot(wj, isect.n)</code>
+is accumulated. Finally, function returns average lighting as result.
+<br/> Importance sampling: For every light source in the scene, first
+check to determine how many <code>num_samples</code> we should use
+(delta light only needs one, otherwise use <code>ns_area_light</code>),
+and generate a sample with <code>light-&gt;sample_L</code>. We ignore
+incoming light with <code>wj_object.z &lt; 0</code> (behind the incident
+surface), and create a new ray as usual. Note that <code>min_t</code>
+and <code>max_t</code> need to be set to <code>EPS_F</code> and
+<code>distToLight - EPS_F</code> respectively to workaround floating
+precision issue. Finally, accumulate the average contribution of each
+light source to result. ### Show some images rendered with both
+implementations of the direct lighting function.</p>
+<table>
+<colgroup>
+<col style="width: 51%" />
+<col style="width: 48%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Hemisphere</th>
+<th>Importance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><img src="images/otherpic/bunny_h_p3.png" /></td>
+<td><img src="images/otherpic/bunny_p3.png" /></td>
+</tr>
+<tr class="even">
+<td><img src="images/otherpic/dragon_h_p3.png" /></td>
+<td><img src="images/otherpic/dragon_p3.png" /></td>
+</tr>
+</tbody>
+</table>
+<h3
+id="focus-on-one-particular-scene-with-at-least-one-area-light-and-compare-the-noise-levels-in-soft-shadows-when-rendering-with-1-4-16-and-64-light-rays-the--l-flag-and-with-1-sample-per-pixel-the--s-flag-using-light-sampling-not-uniform-hemisphere-sampling.">Focus
+on one particular scene with at least one area light and compare the
+noise levels in soft shadows when rendering with 1, 4, 16, and 64 light
+rays (the <code>-l</code> flag) and with 1 sample per pixel (the
+<code>-s</code> flag) using light sampling, not uniform hemisphere
+sampling.</h3>
+<table>
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 24%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>1 ray</th>
+<th>4 rays</th>
+<th>16 rays</th>
+<th>64 rays</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><img src="images/otherpic/bunny_1_1_p3.png" /></td>
+<td><img src="images/otherpic/bunny_4_1_p3.png" /></td>
+<td><img src="images/otherpic/bunny_16_1_p3.png" /></td>
+<td><img src="images/otherpic/bunny_64_1_p3.png" /></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Compare the results between uniform hemisphere sampling and lighting
+sampling in a one-paragraph analysis. Assuming the same parameters,
+hemisphere sampling is significantly noisier than importance lighting
+sampling.</li>
+</ul>
+<h2 id="part-4">Part 4</h2>
+<p>Author: x ### Walk through your implementation of the indirect
+lighting function. In
+<code>PathTracer::at_least_one_bounce_radiance()</code>: 1. Define a
+probability, <span class="math inline">\(p\)</span>, for our Russian
+Roulette revolver. 2. First, get the one-bounce radiance of the
+intersection point, and add it to the total radiance, <span
+class="math inline">\(L_{\text{out}}\)</span>. 3. Then, get the bsdf,
+pdf and the <span class="math inline">\(\omega_{\text{in}}\)</span> with
+<code>sample_f</code>. 4. If the depth of the ray (initialised as <span
+class="math inline">\(0\)</span>) exceeds <code>max_ray_depth</code>,
+return <span class="math inline">\(L_{\text{out}}\)</span>. 5. Discharge
+our revolver for the Russian Roulette: with probability <span
+class="math inline">\(p\)</span> we continue, with probably <span
+class="math inline">\(1-p\)</span> we stop and return <span
+class="math inline">\(L_{\text{out}}\)</span>. However, we get a “free
+round”: if the depth of ray is 0, we always continue. 6. If we are lucky
+to continue, construct a ray starting at the intersection point shooting
+towards <span class="math inline">\(\omega_{\text{in}}\)</span>, with
+depth increased and <code>min_t</code> set as <span
+class="math inline">\(\epsilon\)</span>. 7. If the ray hit something,
+then we recursively call <code>at_least_one_bounce_radiance</code> with
+the newly-generated ray and the new intersection point, and get the
+returned radiance <span class="math inline">\(L\)</span>. 8. Calculate
+the unbiased estimator <span
+class="math inline">\(X_{\text{rr}}=\frac{Lf(w_i\rightarrow
+w_o)\cos{\theta}}{p_{\text{rr}}p_{w_{\text{in}}}}\)</span>, where <span
+class="math inline">\(f(w_i\rightarrow w_o)\)</span> is the bsdf we get
+and <span class="math inline">\(p_{w_{\text{in}}}\)</span> is the pdf we
+get, and add it to <span class="math inline">\(L_{\text{out}}\)</span>.
+9. Return <span class="math inline">\(L_{\text{out}}\)</span>.</p>
+<h3
+id="show-some-images-rendered-with-global-direct-and-indirect-illumination.-use-1024-samples-per-pixel.">Show
+some images rendered with global (direct and indirect) illumination. Use
+1024 samples per pixel.</h3>
+<p><img src="./images/part4/CBbunny_t8_s1024_l16_m5_960_540.png"
+alt="bunny" /><br />
+<img src="./images/part4/CBspheres_t8_s1024_l16_m5_960_540.png"
+alt="sphere" /><br />
+<img src="./images/part4/wall-e_t8_s1024_l16_m5_960_540.png"
+alt="walle" /></p>
+<h3
+id="pick-one-scene-and-compare-rendered-views-first-with-only-direct-illumination-then-only-indirect-illumination.-use-1024-samples-per-pixel.-you-will-have-to-edit-pathtracerat_least_one_bounce_radiance-in-your-code-to-generate-these-views.">Pick
+one scene and compare rendered views first with only direct
+illumination, then only indirect illumination. Use 1024 samples per
+pixel. (You will have to edit
+PathTracer::at_least_one_bounce_radiance(…) in your code to generate
+these views.)</h3>
+<p>We edited <code>PathTracer::at_least_one_bounce_radiance</code> such
+that the initial value of <code>L_out</code> is
+<code>r.depth == 0 ? Vector3D() : one_bounce_radiance(r, isect)</code>
+or
+<code>r.depth != 0 ? Vector3D() : one_bounce_radiance(r, isect)</code>.
+We also need to disable zero-bounce lighting.</p>
+<p>Argument:
+<code>./pathtracer -t 15 -r 960 540 -l 16 -m 5 -s 1024 -f CBbunny_t8_s1024_l16_m5_960_540.png ../dae/sky/CBbunny.dae</code><br />
+1967.3885s on <code>hive6.eecs</code> with i7-4770 @ 3.7GHz.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Direct</th>
+<th>Indirect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><img src="./images/part4/CBbunny_t8_s1024_l16_m5_960_540_direct.png"
+alt="bunny" /></td>
+<td><img
+src="./images/part4/CBbunny_t8_s1024_l16_m5_960_540_indirect.png"
+alt="bunny" /></td>
+</tr>
+</tbody>
+</table>
+<h3
+id="for-cbbunny.dae-compare-rendered-views-with-max_ray_depth-set-to-0-1-2-3-and-100-the--m-flag.-use-1024-samples-per-pixel.">For
+CBbunny.dae, compare rendered views with max_ray_depth set to 0, 1, 2,
+3, and 100 (the -m flag). Use 1024 samples per pixel.</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><code>max_ray_depth</code></th>
+<th>Pic</th>
+<th>Argument</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td><img src="./images/part4/CBbunny_t8_s1024_l16_m0_960_540.png"
+alt="bunny" /></td>
+<td><code>./pathtracer -t 8 -s 1024 -l 16 -m 0 -r 960 540 -f ./out-part4-2/CBbunny_t8_s1024_l16_m0_960_540.png ../dae/sky/CBbunny.dae</code></td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td><img src="./images/part4/CBbunny_t8_s1024_l16_m1_960_540.png"
+alt="bunny" /></td>
+<td><code>./pathtracer -t 8 -s 1024 -l 16 -m 1 -r 960 540 -f ./out-part4-2/CBbunny_t8_s1024_l16_m0_960_540.png ../dae/sky/CBbunny.dae</code></td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td><img src="./images/part4/CBbunny_t8_s1024_l16_m2_960_540.png"
+alt="bunny" /></td>
+<td><code>./pathtracer -t 8 -s 1024 -l 16 -m 2 -r 960 540 -f ./out-part4-2/CBbunny_t8_s1024_l16_m0_960_540.png ../dae/sky/CBbunny.dae</code></td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td><img src="./images/part4/CBbunny_t8_s1024_l16_m3_960_540.png"
+alt="bunny" /></td>
+<td><code>./pathtracer -t 8 -s 1024 -l 16 -m 3 -r 960 540 -f ./out-part4-2/CBbunny_t8_s1024_l16_m0_960_540.png ../dae/sky/CBbunny.dae</code></td>
+</tr>
+<tr class="odd">
+<td>100</td>
+<td><img src="./images/part4/CBbunny_t8_s1024_l16_m100_960_540.png"
+alt="bunny" /></td>
+<td><code>./pathtracer -t 8 -s 1024 -l 16 -m 100 -r 960 540 -f ./out-part4-2/CBbunny_t8_s1024_l16_m0_960_540.png ../dae/sky/CBbunny.dae</code></td>
+</tr>
+</tbody>
+</table>
+<h3
+id="pick-one-scene-and-compare-rendered-views-with-various-sample-per-pixel-rates-including-at-least-1-2-4-8-16-64-and-1024.-use-4-light-rays.">Pick
+one scene and compare rendered views with various sample-per-pixel
+rates, including at least 1, 2, 4, 8, 16, 64, and 1024. Use 4 light
+rays.</h3>
+<p>We used this simple script to overload hive for one whole night:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./pathtracer</span> <span class="at">-t</span> 8 <span class="at">-s</span> 1 <span class="at">-l</span> 4 <span class="at">-m</span> 5 <span class="at">-r</span> 960 540 <span class="at">-f</span> ./out-part4-1/CBspheres_t8_s1_l4_m5_960_540.png ../dae/sky/CBspheres_lambertian.dae <span class="kw">&amp;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./pathtracer</span> <span class="at">-t</span> 8 <span class="at">-s</span> 2 <span class="at">-l</span> 4 <span class="at">-m</span> 5 <span class="at">-r</span> 960 540 <span class="at">-f</span> ./out-part4-1/CBspheres_t8_s2_l4_m5_960_540.png ../dae/sky/CBspheres_lambertian.dae <span class="kw">&amp;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./pathtracer</span> <span class="at">-t</span> 8 <span class="at">-s</span> 4 <span class="at">-l</span> 4 <span class="at">-m</span> 5 <span class="at">-r</span> 960 540 <span class="at">-f</span> ./out-part4-1/CBspheres_t8_s4_l4_m5_960_540.png ../dae/sky/CBspheres_lambertian.dae <span class="kw">&amp;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./pathtracer</span> <span class="at">-t</span> 8 <span class="at">-s</span> 8 <span class="at">-l</span> 4 <span class="at">-m</span> 5 <span class="at">-r</span> 960 540 <span class="at">-f</span> ./out-part4-1/CBspheres_t8_s8_l4_m5_960_540.png ../dae/sky/CBspheres_lambertian.dae <span class="kw">&amp;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./pathtracer</span> <span class="at">-t</span> 8 <span class="at">-s</span> 16 <span class="at">-l</span> 4 <span class="at">-m</span> 5 <span class="at">-r</span> 960 540 <span class="at">-f</span> ./out-part4-1/CBspheres_t8_s16_l4_m5_960_540.png ../dae/sky/CBspheres_lambertian.dae <span class="kw">&amp;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./pathtracer</span> <span class="at">-t</span> 8 <span class="at">-s</span> 64 <span class="at">-l</span> 4 <span class="at">-m</span> 5 <span class="at">-r</span> 960 540 <span class="at">-f</span> ./out-part4-1/CBspheres_t8_s64_l4_m5_960_540.png ../dae/sky/CBspheres_lambertian.dae <span class="kw">&amp;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./pathtracer</span> <span class="at">-t</span> 8 <span class="at">-s</span> 1024 <span class="at">-l</span> 4 <span class="at">-m</span> 5 <span class="at">-r</span> 960 540 <span class="at">-f</span> ./out-part4-1/CBspheres_t8_s1024_l4_m5_960_540.png ../dae/sky/CBspheres_lambertian.dae <span class="kw">&amp;</span></span></code></pre></div>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><code>sample_per_pixel</code></th>
+<th>Pic</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><img src="./images/part4/CBspheres_t8_s1_l4_m5_960_540.png"
+alt="sphere" /></td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><img src="./images/part4/CBspheres_t8_s2_l4_m5_960_540.png"
+alt="sphere" /></td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td><img src="./images/part4/CBspheres_t8_s4_l4_m5_960_540.png"
+alt="sphere" /></td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td><img src="./images/part4/CBspheres_t8_s8_l4_m5_960_540.png"
+alt="sphere" /></td>
+</tr>
+<tr class="odd">
+<td>16</td>
+<td><img src="./images/part4/CBspheres_t8_s16_l4_m5_960_540.png"
+alt="sphere" /></td>
+</tr>
+<tr class="even">
+<td>64</td>
+<td><img src="./images/part4/CBspheres_t8_s64_l4_m5_960_540.png"
+alt="sphere" /></td>
+</tr>
+<tr class="odd">
+<td>1024</td>
+<td><img src="./images/part4/CBspheres_t8_s1024_l4_m5_960_540.png"
+alt="sphere" /></td>
+</tr>
+</tbody>
+</table>
+<h2 id="part-5-adaptive-sampling">Part 5: Adaptive Sampling</h2>
+<p>Author: l</p>
+<h3 id="walk-through-your-implementation-of-the-adaptive-sampling.">Walk
+through your implementation of the adaptive sampling.</h3>
+<p>In the <code>PathTracer::raytrace_pixel</code> loop, use
+<code>s1</code> and <code>s2</code> to trace the accumulative sum of
+illuminance and illuminance^2 at present. Before every
+<code>samplesPerBatch</code> execution of loop body, check if currently
+<span class="math inline">\(1.96 \times \frac{\sigma}{\sqrt{n}} &lt;=
+maxTolerance \times mean\)</span>. If this condition is satisfied, stop
+sampling and store current average, sampling count to sample buffer,
+sample count buffer. ### Pick one scene and render it with at least 2048
+samples per pixel. Show a good sampling rate image with clearly visible
+differences in sampling rate over various regions and pixels. Include
+both your sample rate image, which shows your how your adaptive sampling
+changes depending on which part of the image you are rendering, and your
+noise-free rendered result. Use 1 sample per light and at least 5 for
+max ray depth.</p>
+<p>CLI:
+<code>./pathtracer -t 8 -s 2048 -l 1 -m 6 -a 256 0.05 -r 1920 1080 -f niubi1.png ../dae/keenan/building.dae</code></p>
+<table>
+<colgroup>
+<col style="width: 45%" />
+<col style="width: 54%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Result</th>
+<th>Sample Distribution</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><img src="images/otherpic/niubi1.png" /></td>
+<td><img src="images/otherpic/niubi1_rate.png" /></td>
+</tr>
+</tbody>
+</table>
+<p><code>hive</code> must be very tired for this picture……</p>
+<figure>
+<img src="images/otherpic/p5-niubi.png" alt="time" />
+<figcaption aria-hidden="true">time</figcaption>
+</figure>
+<h3 id="potential-ec">Potential EC???</h3>
+<p>author: x</p>
+<p>We investigated how <code>pathtracer</code> parse camera in
+<code>dae</code> file. It appears that for some cameras (that has
+certain transformation, like in <code>building.dae</code> - the camera,
+as in blender, is inside the tunnel, but when opening in
+<code>pathtracer</code> it’s above) it cannot be parsed correctly -
+potentially because of some transformations it made in
+<code>collada.cpp:175-199</code>. We investigated how
+<code>pathtracer</code> parse XML, specifically in
+<code>collada.cpp:255-268</code> (how does it apply transformation to
+camera) and <code>collada.cpp:358-397</code> (how it parsess camera),
+and how camera is used in the actual rendering, specifically
+<code>application.cpp:246-251</code> and
+<code>application.cpp:284-296</code>.<br />
+We need to solve this because we need to run rendering for
+<code>building.dae</code> on hive in order to save our electricity, but
+<code>hive*</code>’s nVidia driver has certain bugs that prevents OpenGL
+from running on a forwarded headless X server, so we must be able to
+transform the camera without the GUI.</p>
+<p>Sadly we cannot fix the issue in one day, so we decided to use an
+violent approach (in branch <code>violent</code>): we dump out the
+camera setting and forcibly write it in. Then we discovered the
+<code>-c</code> flag so this is useless.</p>
+<p>We encountered the same issue when rendering <code>1920*1080</code>:
+we need to scale about 2.5x in order to get a real high resolution
+image. Thus, we added a flag <code>-k</code> such that it moves the
+camera up with argument <code>2.5f</code>. This makes our life easier
+before discovering <code>-c</code> flag, and we don’t need to deal with
+camera settings at all even if we knew it.</p>
+</body>
 </html>
