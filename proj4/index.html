@@ -1,7 +1,325 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 4 here
-	</body>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>index</title>
+  <script
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+  type="text/javascript"></script>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<h1 id="report-on-cs-184-project-4-cloth-sim">Report on CS 184 Project
+4: Cloth Sim</h1>
+<p><strong>IE9 OR ABOVE AND JAVASCRIPT CAPABILITY IS REQUIRED TO
+SUCCESSFULLY RENDER THIS DOCUMENT</strong><br />
+<strong>HTML5 IS PREFERABLE BUT NOT REQUIRED</strong></p>
+<p>This site best viewed with Netscape Navigator: <img
+src="images/nostalgia.png" alt="nostalgia" /></p>
+<h2 id="overview">Overview</h2>
+<p>This project aims to simulate fabric’s interaction with physical
+environment, with tweakable parameters of material, exterior influences
+and representation. It is also a playground for shader experiments.</p>
+<h2 id="part-1-masses-and-springs">Part 1: Masses and springs</h2>
+<ul>
+<li><p>Take some screenshots of <code>scene/pinned2.json</code> from a
+viewing angle where you can clearly see the cloth wireframe to show the
+structure of your point masses and springs.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Spring Type</th>
+<th>Screenshot</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>All</td>
+<td><img src="images/p1/all.png" /></td>
+</tr>
+<tr class="even">
+<td>bending</td>
+<td><img src="images/p1/bending.png" /></td>
+</tr>
+<tr class="odd">
+<td>shearing</td>
+<td><img src="images/p1/shearing.png" /></td>
+</tr>
+<tr class="even">
+<td>structural</td>
+<td><img src="images/p1/structural.png" /></td>
+</tr>
+</tbody>
+</table>
+<p>Every lattice point corresponds to a point mass, and edges represent
+the springs connecting them. Both bending and structural springs connect
+to form a regular grid, while shearing springs connect diagonally.<br />
+</p></li>
+<li><p>Show us what the wireframe looks like (1) without any shearing
+constraints, (2) with only shearing constraints, and (3) with all
+constraints.</p>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th>Wireframe</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>No shearing</td>
+<td><img src="images/p1/noshearing.png" /></td>
+</tr>
+<tr class="even">
+<td>Only shearing</td>
+<td><img src="images/p1/shearing.png" /></td>
+</tr>
+<tr class="odd">
+<td>All</td>
+<td><img src="images/p1/all.png" /></td>
+</tr>
+</tbody>
+</table></li>
+</ul>
+<h2 id="part-2-simulation-via-numerical-integration">Part 2: Simulation
+via numerical integration</h2>
+<ul>
+<li><p>Experiment with some the parameters in the simulation. Describe
+the effects of changing the spring constant <code>ks</code>; how does
+the cloth behave from start to rest with a very low <code>ks</code>? A
+high <code>ks</code>? What about for <code>density</code>? What about
+for <code>damping</code>? For each of the above, observe any noticeable
+differences in the cloth compared to the default parameters and show us
+some screenshots of those interesting differences and describe when they
+occur. A higher <code>ks</code> makes the fabric feels more taut and
+bouncy, and a lower <code>ks</code> makes it looser and less elastic.
+Higher <code>density</code> exerts more force on every point mass and
+makes the fabric feel heavier. <code>damping</code> acts as an
+environmental resistance that damps the motion, which in some way can
+reflect the viscosity of air. </br> Several observations:</p>
+<table>
+<colgroup>
+<col style="width: 67%" />
+<col style="width: 32%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><img src="images/p2/taut.png" /></td>
+<td>(This doesn’t really show on screenshot) With density set to very
+high (beyond <code>10000g/cm^2</code>), part of fabric being stretched
+taut will not stop bouncing around randomly after the fabric comes to
+resting position.</td>
+</tr>
+<tr class="even">
+<td><img src="images/p2/toobouncy.png" /></td>
+<td>When adjusting <code>density</code> to a lower value (which is more
+like real life fabric density) while keeping <code>ks</code> at a
+mismatched value (too high), fabric will come to rest with many ripples,
+or even start flapping violently.</td>
+</tr>
+<tr class="odd">
+<td><img src="images/p2/wat.png" /></td>
+<td>This is an extreme case of <code>density</code>/<code>ks</code>
+mismatching. More extreme values can cause out of range motions and
+crash the simulation.</td>
+</tr>
+</tbody>
+</table></li>
+<li><p>Show us a screenshot of your shaded cloth from
+<code>scene/pinned4.json</code> in its final resting state! If you
+choose to use different parameters than the default ones, please list
+them. With default parameters: <img
+src="images/p2/pinned4.png" /></p></li>
+</ul>
+<video controls>
+<source src="images/p2/springs.mp4" type="video/mp4">
+</video>
+<video controls>
+<source src="images/p2/parameters.mp4" type="video/mp4">
+</video>
+<h2 id="part-3-handling-collisions-with-other-objects">Part 3: Handling
+collisions with other objects</h2>
+<ul>
+<li><p>Show us screenshots of your shaded cloth from
+<code>scene/sphere.json</code> in its final resting state on the sphere
+using the default <code>ks = 5000</code> as well as with
+<code>ks = 500</code> and <code>ks = 50000</code>. Describe the
+differences in the results.</p>
+<table>
+<thead>
+<tr class="header">
+<th><code>ks</code></th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>500</td>
+<td><img src="images/p3/ks500.png" /></td>
+</tr>
+<tr class="even">
+<td>5000</td>
+<td><img src="images/p3/ks5000.png" /></td>
+</tr>
+<tr class="odd">
+<td>50000</td>
+<td><img src="images/p3/ks50000.png" /></td>
+</tr>
+</tbody>
+</table>
+<p>Note that when <code>ks</code> is higher, the fabric becomes more
+rigid.<br />
+</p></li>
+<li><p>Show us a screenshot of your shaded cloth lying peacefully at
+rest on the plane. If you haven’t by now, feel free to express your
+colorful creativity with the cloth! (You will need to complete Part 5
+first to show custom colors for anything but the “Wireframe” material.)
+<img src="images/p3/plane.png" /></p></li>
+</ul>
+<video controls>
+<source src="images/p3/p3.mp4" type="video/mp4">
+</video>
+<h2 id="part-4-handling-self-collisions">Part 4: Handling
+self-collisions</h2>
+<ul>
+<li><p>Show us at least 3 screenshots that document how your cloth falls
+and folds on itself, starting with an early, initial self-collision and
+ending with the cloth at a more restful state (even if it is still
+slightly bouncy on the ground).</p>
+<table>
+<colgroup>
+<col style="width: 69%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Stage</th>
+<th>Screenshot</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Cascading onto the plane, no self-collision yet</td>
+<td><img src="images/p4/start.png" /></td>
+</tr>
+<tr class="even">
+<td>Bottom of the fabric starts self-colliding, repelling each
+other</td>
+<td><img src="images/p4/collision.png" /></td>
+</tr>
+<tr class="odd">
+<td>The fabric comes to a rest after some time</td>
+<td><img src="images/p4/rest.png" /></td>
+</tr>
+</tbody>
+</table></li>
+<li><p>Vary the <code>density</code> as well as <code>ks</code> and
+describe with words and screenshots how they affect the behavior of the
+cloth as it falls on itself.</p>
+<table>
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 78%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><img src="images/p4/ref.png" /></td>
+<td>Default parameters</td>
+</tr>
+<tr class="even">
+<td><img src="images/p4/lowks.png" /></td>
+<td>As expected, a lower <code>ks</code> makes the fabric easier to
+deform</td>
+</tr>
+<tr class="odd">
+<td><img src="images/p4/highd.png" /></td>
+<td>A higher <code>density</code> just makes it heavier, which mostly
+makes it fall faster and more compact</td>
+</tr>
+</tbody>
+</table></li>
+</ul>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><span class="math inline">\(k_s\)</span>\Density</th>
+<th>5</th>
+<th>50</th>
+<th>500</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>500</td>
+<td><img src="images/p4/5_500.png" /></td>
+<td><img src="images/p4/50_500.png" /></td>
+<td><img src="images/p4/500_500.png" /></td>
+</tr>
+<tr class="even">
+<td>5000</td>
+<td><img src="images/p4/5_5k.png" /></td>
+<td><img src="images/p4/50_5k.png" /></td>
+<td><img src="images/p4/500_5k.png" /></td>
+</tr>
+<tr class="odd">
+<td>50000</td>
+<td><img src="images/p4/5_50k.png" /></td>
+<td><img src="images/p4/50_50k.png" /></td>
+<td><img src="images/p4/500_50k.png" /></td>
+</tr>
+</tbody>
+</table>
+<video controls>
+<source src="images/p4/p4.mp4" type="video/mp4">
+</video>
+<h2 id="part-5-shaders">Part 5: Shaders</h2>
+<h3 id="diffuse">Diffuse</h3>
+<p><img src="images/p5/diffuse.png" /></p>
+<h3 id="phong">Phong</h3>
+<p><img src="images/p5/phong.png" /></p>
+<h3 id="texture">Texture</h3>
+<p><img src="images/p5/texture.png" /></p>
+<h3 id="displacement">Displacement</h3>
+<p><img src="images/p5/displacement_10_1.png" /><br />
+<img src="images/p5/displacement_100_0.02.png" /><br />
+<img src="images/p5/displacement_100_0.05.png" /><br />
+<img src="images/p5/displacement_100_0.25.png" /></p>
+<h3 id="bump">Bump</h3>
+<p><img src="images/p5/bump_2_1.png" /><br />
+<img src="images/p5/bump_2_10.png" /><br />
+<img src="images/p5/bump_10_2.png" /></p>
+<h3 id="reflection">Reflection</h3>
+<p><img src="images/p5/mirror1.png" /><br />
+<img src="images/p5/mirror2.png" /></p>
+<h3 id="ec-displacement-reflection">EC: Displacement Reflection</h3>
+<p><img src="images/p5/dr1.png" /><br />
+<img src="images/p5/dr2.png" /><br />
+<img src="images/p5/dr3.png" /><br />
+<img src="images/p5/dr4.png" /></p>
+<video controls>
+<source src="images/p5/p5.mp4" type="video/mp4">
+</video>
+</body>
 </html>
