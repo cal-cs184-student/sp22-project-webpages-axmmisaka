@@ -1,7 +1,131 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>index</title>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<h1 id="report-on-cs-184-project-3-path-tracer-take-two">Report on CS
+184 Project 3: Path Tracer, take two</h1>
+<h2 id="overview">Overview</h2>
+<p>This project implements additional features on the basis of previous
+project p3-1: pathtracer. For the project requirement, we implemented
+part 1 and part 2.</p>
+<h2 id="part-1-mirror-and-glass-materials">Part 1: Mirror and Glass
+Materials</h2>
+<ul>
+<li><p>Show a sequence of six images of scene <code>CBspheres.dae</code>
+rendered with <code>max_ray_depth</code> set to 0, 1, 2, 3, 4, 5, and
+100. The other settings should be at least 64 samples per pixel and 4
+samples per light.<br />
+Using <code>-s 256 -l 16 -r 1920 1080</code>: </br> |
+<code>max_ray_depth</code> | Result | |—————–|———————————-| | 0 | <img
+src="images/p1/spheres_m_0.png" /> | | 1 | <img
+src="images/p1/spheres_m_1.png" /> | | 2 | <img
+src="images/p1/spheres_m_2.png" /> | | 3 | <img
+src="images/p1/spheres_m_3.png" /> | | 4 | <img
+src="images/p1/spheres_m_4.png" /> | | 5 | <img
+src="images/p1/spheres_m_5.png" /> | | 100 | <img
+src="images/p1/spheres_m_100.png" /> |</p></li>
+<li><p>Point out the new multibounce effects that appear in each image.
+Explain how these bounce numbers relate to the particular effects that
+appear.<br />
+We can see a progressive change with the rising
+<code>max_ray_depth</code>: at 0 bounce, we can only see the direct
+light from light source; at 1 bounce, we can additionally see all direct
+reflection from all surfaces and highlights on spheres; at 2 bounces,
+secondary reflection of its surrounding begins to appear on the metallic
+sphere, and the glass sphere starts to reflect light (however, refract
+light doesn’t escape the sphere, so the sphere is significantly dimmer),
+also the ceiling is now lit; at 3 bounces, the glass sphere becomes more
+transparent and now has proper refraction effects, and we can see the
+refracted light in its shadow; at 4 bounces, the glass sphere clears up
+more, and a projection of rays appears on the blue wall (rays get
+reflected from metallic sphere into the glass sphere, and refracted
+towards the wall), also note that the glass sphere reflection on the
+metallic sphere starts clearing up as well (with 1 depth delay); 5
+bounces and 100 bounces only provides slight visual quality improvements
+comparing with previous images.</p></li>
+</ul>
+<h2 id="part-2-microfacet-material">Part 2: Microfacet Material</h2>
+<ul>
+<li><p>Show a sequence of 4 images of scene
+<code>CBdragon_microfacet_au.dae</code> rendered with α set to 0.005,
+0.05, 0.25 and 0.5. The other settings should be at least 128 samples
+per pixel and 1 samples per light. The number of bounces should be at
+least 5. Describe the differences between different images. Note that,
+to change the α, just open the .dae file and search for
+<code>microfacet</code>.<br />
+Using <code>-s 512 -l 8 -m 8 -r 1920 1080</code>: </br> | α | Result |
+|——-|————————————–| | 0.005 | <img
+src="images/p2/dragon_alpha_005.png" /> | | 0.05 | <img
+src="images/p2/dragon_alpha_05.png" /> | | 0.25 | <img
+src="images/p2/dragon_alpha_25.png" /> | | 0.5 | <img
+src="images/p2/dragon_alpha_5.png" /> |</br></p>
+<p>As we can see in the images shown above, with higher α values, the
+material becomes less reflective and diffuses more.</p></li>
+<li><p>Show two images of scene <code>CBbunny_microfacet_cu.dae</code>
+rendered using cosine hemisphere sampling (default) and your importance
+sampling. The sampling rate should be fixed at 64 samples per pixel and
+1 samples per light. The number of bounces should be at least 5. Briefly
+discuss their difference.<br />
+| Cosine Hemisphere Sampling | Importance Sampling |
+|———————————-|————————————-| | <img src="images/p2/bunny_cosine.png" />
+| <img src="images/p2/bunny_importance.png" /> |</br></p>
+<p>As we can see, the importance sampling result is significantly less
+noisy, because the default hemisphere sampling has a higher chance to
+sample a direction with a low density of microfacets.</p></li>
+<li><p>Show at least one image with some other conductor material,
+replacing <code>eta</code> and <code>k</code>. Note that you should look
+up values for real data rather than modifying them arbitrarily. Tell us
+what kind of material your parameters correspond to.<br />
+A mercury bunny: </br> <img src="images/p2/bunny_hg.png" /> </br> Using
+parameters: </br></p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">alpha</span>&gt;0.1&lt;/<span class="kw">alpha</span>&gt;</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">eta</span>&gt;1.8795 1.5472 1.1353&lt;/<span class="kw">eta</span>&gt;</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">k</span>&gt;5.1076 4.6437 3.9980&lt;/<span class="kw">k</span>&gt;</span></code></pre></div></li>
+</ul>
+<h2 id="part-3-environment-light-if-implemented---pick-one-exr">Part 3:
+Environment Light (if implemented) - pick one exr</h2>
+<ul>
+<li><p>In a few sentences, explain the ideas behind environment lighting
+(i.e. why we do it/how it works).<br />
+<text></p></li>
+<li><p>Show the <code>probability_debug.png</code> file for the .exr
+file you are using, generated using the
+<code>save_probability_debug()</code> helper function after initializing
+your probability distributions.<br />
+<text></p></li>
+<li><p>Use the <code>bunny_unlit.dae</code> scene and your environment
+map .exr file and render two pictures, one with uniform sampling and one
+with importance sampling. Use 4 samples per pixel and 64 samples per
+light in each. Compare noise levels.<br />
+<text></p></li>
+<li><p>Use a different image (if you did part 2, we recommend
+<code>bunny_microfacet_cu_unlit.dae</code>) and your environment map
+.exr file and render two pictures, one with uniform sampling and one
+with importance sampling. Use 4 samples per pixel and 64 samples per
+light in each. Compare noise levels.<br />
+<text></p></li>
+</ul>
+<h2 id="part-4-depth-of-field-if-implemented">Part 4: Depth of Field (if
+implemented)</h2>
+<ul>
+<li><p>In a few sentences, explain the differences between a pinhole
+camera model and a thin-lens camera model.<br />
+<text></p></li>
+<li><p>Show a “focus stack” where you focus at 4 visibly different
+depths through a scene.<br />
+<text></p></li>
+<li><p>Show a sequence of 4 pictures with visibly different aperture
+sizes, all focused at the same point in a scene.<br />
+<text></p></li>
+</ul>
+</body>
 </html>
